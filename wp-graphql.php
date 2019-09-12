@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: WP GraphQL
+ * Plugin Name: WP GraphQL - YT Advisors
  * Plugin URI: https://github.com/wp-graphql/wp-graphql
  * Description: GraphQL API for WordPress
  * Author: WPGraphQL
