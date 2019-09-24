@@ -93,7 +93,8 @@ class PostObjectLoader extends AbstractDataLoader {
 			$post_object = get_post( (int) $key );
 
 			if ( empty( $post_object ) ) {
-				throw new UserError( sprintf( __( 'No item was found with ID %s', 'wp-graphql' ), $key ) );
+			    return [];
+				//throw new UserError( sprintf( __( 'No item was found with ID %s', 'wp-graphql' ), $key ) );
 			}
 
 			/**
