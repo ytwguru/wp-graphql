@@ -102,7 +102,6 @@ class MenuItemConnectionResolver extends PostObjectConnectionResolver {
 
 		// Prevent the query from matching anything by default.
 		$query_args = [
-            'ep_integrate'   => true,
 			'post_type' => 'nav_menu_item',
 			'post__in'  => [ 0 ],
 		];

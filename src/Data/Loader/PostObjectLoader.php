@@ -49,7 +49,6 @@ class PostObjectLoader extends AbstractDataLoader {
 		 * in the same order the keys were provided in.
 		 */
 		$args = [
-            'ep_integrate'          => true,
 			'post_type'           => 'any',
 			'post_status'         => 'any',
 			'posts_per_page'      => count( $keys ),

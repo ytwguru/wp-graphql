@@ -308,6 +308,7 @@ class PostObjectConnectionResolver extends AbstractConnectionResolver {
 		/**
 		 * Return the $query_args
 		 */
+        $query_args['ep_integrate'] = true;
 		return $query_args;
 	}
 
