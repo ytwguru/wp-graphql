@@ -277,7 +277,7 @@ class PostObjectConnectionResolver extends AbstractConnectionResolver {
 			 * Don't order search results by title (causes funky issues with cursors)
 			 */
 			//$query_args['search_orderby_title'] = false;
-            $query_args['orderby']              = 'ID';
+            $query_args['orderby']              = 'relevance';
             $query_args['order']                = isset( $last ) ? 'ASC' : 'DESC';
 		}
 

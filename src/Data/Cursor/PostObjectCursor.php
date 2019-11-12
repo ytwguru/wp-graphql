@@ -179,6 +179,8 @@ class PostObjectCursor {
 			case 'parent':
 				$by = 'post_' . $by;
 				break;
+            case "relevance":
+                return;
 		}
 
 		$value = $this->get_cursor_post()->{$by};
