@@ -67,7 +67,7 @@ class UserLoader extends AbstractDataLoader {
 		 */
 		foreach ( $keys as $key ) {
 			$user = get_user_by( 'id', $key );
-            if(!$user)
+            if($user)
                 $all_users[ $user->ID ] = new User( $user );
 		}
 		return $all_users;

@@ -250,7 +250,7 @@ class PostObjectConnectionResolver extends AbstractConnectionResolver {
 					true
 				) ) {
 					$query_args['orderby'] = esc_sql( $orderby_input['field'] );
-				} elseif ( ! empty( $orderby_input['field'] ) ) {
+				} elseif ( ! empty( $orderby_input['field'] ) && ! empty( $orderby_input['order'] )) {
 					$query_args['orderby'] = [
 						esc_sql( $orderby_input['field'] ) => esc_sql( $orderby_input['order'] ),
 					];
