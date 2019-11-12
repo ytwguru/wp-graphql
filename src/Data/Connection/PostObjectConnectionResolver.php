@@ -279,7 +279,6 @@ class PostObjectConnectionResolver extends AbstractConnectionResolver {
 			$query_args['search_orderby_title'] = false;
             $query_args['orderby']              = 'relevance';
             $query_args['order']                = isset( $last ) ? 'ASC' : 'DESC';
-            unset($query_args['orderby']);
 		}
 
 		/**
