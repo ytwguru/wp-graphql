@@ -112,6 +112,11 @@ class PostObjectConnectionResolver extends AbstractConnectionResolver {
 		$last  = ! empty( $this->args['last'] ) ? $this->args['last'] : null;
 		$first = ! empty( $this->args['first'] ) ? $this->args['first'] : null;
 
+        /**
+         * Disable Elasticsearch
+         */
+        $query_args['ep_integrate'] = false;
+
 		/**
 		 * Ignore sticky posts by default
 		 */
@@ -147,7 +152,6 @@ class PostObjectConnectionResolver extends AbstractConnectionResolver {
 		 * to filter the WP_Query to support cursor pagination
 		 */
 		$cursor_offset                        = $this->get_offset();
-		$query_args["offset"] = $cursor_offset;
 		$query_args['graphql_cursor_offset']  = $cursor_offset;
 		$query_args['graphql_cursor_compare'] = ( ! empty( $last ) ) ? '>' : '<';
 
@@ -278,6 +282,7 @@ class PostObjectConnectionResolver extends AbstractConnectionResolver {
 			 * Don't order search results by title (causes funky issues with cursors)
 			 */
 			//$query_args['search_orderby_title'] = false;
+            $query_args['ep_integrate']         = true;
             $query_args['orderby']              = 'relevance';
             $query_args['order']                = isset( $last ) ? 'ASC' : 'DESC';
             $query_args["offset"]               = ! empty( $this->args['after'] ) ? $this->args['after'] : 0;
