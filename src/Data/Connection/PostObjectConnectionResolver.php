@@ -276,15 +276,17 @@ class PostObjectConnectionResolver extends AbstractConnectionResolver {
 			/**
 			 * Don't order search results by title (causes funky issues with cursors)
 			 */
-			$query_args['search_orderby_title'] = false;
-            $query_args['orderby']              = 'relevance';
-            $query_args['order']                = isset( $last ) ? 'ASC' : 'DESC';
+			//$query_args['search_orderby_title'] = false;
+            //$query_args['orderby']              = 'relevance';
+            //$query_args['order']                = isset( $last ) ? 'ASC' : 'DESC';
+            if(isset($query_args['orderby']))
+                unset($query_args['orderby']);
 		}
 
 		/**
 		 * If there's no orderby params in the inputArgs, set order based on the first/last argument
 		 */
-		if ( empty( $query_args['orderby'] ) ) {
+		else if ( empty( $query_args['orderby'] ) ) {
 			$query_args['order'] = ! empty( $last ) ? 'ASC' : 'DESC';
 		}
 
