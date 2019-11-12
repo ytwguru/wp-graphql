@@ -390,6 +390,30 @@ class PostObjectConnectionResolver extends AbstractConnectionResolver {
 
 	}
 
+    /**
+     * get_page_info
+     *
+     * Returns pageInfo for the connection
+     *
+     * @return array
+     */
+    public function get_page_info() {
+
+        $query_args = $this->get_query_args();
+        $endCursor = $this->get_end_cursor();
+        if ( isset( $query_args['s'] ) && ! empty( $query_args['s'] ) ){
+            $endCursor = ! empty( $this->args['after'] ) ? $this->args['after'] : 0;
+        }
+        $page_info = [
+            'startCursor'     => $this->get_start_cursor(),
+            'endCursor'       => $endCursor,
+            'hasNextPage'     => (bool) $this->has_next_page(),
+            'hasPreviousPage' => (bool) $this->has_previous_page(),
+        ];
+
+        return apply_filters( 'graphql_connection_page_info', $page_info, $this );
+
+    }
 	/**
 	 * Limit the status of posts a user can query.
 	 *
