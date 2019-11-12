@@ -136,9 +136,7 @@ class PostObjectCursor {
 			 */
 			$this->compare_with( $orderby, $order );
 
-		} else {
-            $this->compare_with( $orderby, $order );
-        }
+		}
 
 		/**
 		 * No custom comparing. Use the default date
