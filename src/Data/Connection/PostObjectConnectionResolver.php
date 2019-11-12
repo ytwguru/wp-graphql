@@ -402,7 +402,7 @@ class PostObjectConnectionResolver extends AbstractConnectionResolver {
         $query_args = $this->get_query_args();
         $endCursor = $this->get_end_cursor();
         if ( isset( $query_args['s'] ) && ! empty( $query_args['s'] ) ){
-            $endCursor = ! empty( $this->args['after'] ) ? $this->args['after'] : 0;
+            $endCursor = ! empty( $this->args['after'] ) ? 10 + intval($this->args['after']) : 10;
         }
         $page_info = [
             'startCursor'     => $this->get_start_cursor(),
