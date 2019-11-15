@@ -105,8 +105,6 @@ class Post extends Model {
 			'status',
 			'post_status',
 			'isRestricted',
-			'isPrivate',
-			'isPublic',
 		];
 
 		$allowed_restricted_fields[] = $this->post_type_object->graphql_single_name . 'Id';
@@ -407,6 +405,9 @@ class Post extends Model {
 					],
 					'mediaType'           => function() {
 						return wp_attachment_is_image( $this->data->ID ) ? 'image' : 'file';
+					},
+					'mediaItemUrl'        => function() {
+						return wp_get_attachment_url( $this->data->ID );
 					},
 					'sourceUrl'           => function( $size = 'full' ) {
 						if ( ! empty( $size ) ) {

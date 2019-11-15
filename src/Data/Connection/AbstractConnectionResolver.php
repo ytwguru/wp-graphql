@@ -6,6 +6,7 @@ use GraphQL\Error\UserError;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQLRelay\Connection\ArrayConnection;
 use WPGraphQL\AppContext;
+use WPGraphQL\Model\Post;
 
 /**
  * Class AbstractConnectionResolver
@@ -107,6 +108,11 @@ abstract class AbstractConnectionResolver {
 	 */
 	public function __construct( $source, $args, $context, $info ) {
 
+		// Bail if the Post->ID is empty, as that indicates a private post.
+		if ( $source instanceof Post && empty( $source->ID ) ) {
+			$this->should_execute = false;
+		}
+
 		/**
 		 * Set the source (the root object) for the resolver
 		 */
@@ -154,10 +160,59 @@ abstract class AbstractConnectionResolver {
 	}
 
 	/**
+	 * Returns the source of the connection
+	 *
+	 * @access public
+	 * @return mixed
+	 */
+	public function getSource() {
+		return $this->source;
+	}
+
+	/**
+	 * Returns the $args passed to the connection
+	 *
+	 * @return array
+	 */
+	public function getArgs(): array {
+		return $this->args;
+	}
+
+	/**
+	 * Returns the AppContext of the connection
+	 *
+	 * @access public
+	 * @return AppContext
+	 */
+	public function getContext(): AppContext {
+		return $this->context;
+	}
+
+	/**
+	 * Returns the ResolveInfo of the connection
+	 *
+	 * @access public
+	 * @return ResolveInfo
+	 */
+	public function getInfo(): ResolveInfo {
+		return $this->info;
+	}
+
+	/**
+	 * Returns whether the connection should execute
+	 *
+	 * @access public
+	 * @return bool
+	 */
+	public function getShouldExecute(): bool {
+		return $this->should_execute;
+	}
+
+	/**
 	 * Given a key and value, this sets a query_arg which will modify the query_args used by
 	 * the connection resolvers get_query();
 	 *
-	 * @param string $key The key of the query arg to set
+	 * @param string $key   The key of the query arg to set
 	 * @param mixed  $value The value of the query arg to set
 	 */
 	public function setQueryArg( $key, $value ) {
@@ -504,7 +559,20 @@ abstract class AbstractConnectionResolver {
 
 	}
 
+	/**
+	 * Execute the resolver query and get the data for the connection
+	 * 
+	 * @return array
+	 */
 	protected function execute_and_get_data() {
+
+		/**
+		 * If should_execute is explicitly set to false already, we can
+		 * prevent execution quickly. If it's not, we need to
+		 * call the should_execute() method to execute any situational logic
+		 * to determine if the connection query should execute or not
+		 */
+		$should_execute = false === $this->should_execute ? false : $this->should_execute();
 
 		/**
 		 * Check if the connection should execute. If conditions are met that should prevent
@@ -515,7 +583,7 @@ abstract class AbstractConnectionResolver {
 		 * @param bool                       $should_execute Whether the connection should execute
 		 * @param AbstractConnectionResolver $this           Instance of the Connection Resolver
 		 */
-		$this->should_execute = apply_filters( 'graphql_connection_should_execute', $this->should_execute(), $this );
+		$this->should_execute = apply_filters( 'graphql_connection_should_execute', $should_execute, $this );
 		if ( false === $this->should_execute ) {
 			return [];
 		}
