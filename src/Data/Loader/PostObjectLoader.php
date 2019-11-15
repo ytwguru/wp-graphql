@@ -92,11 +92,6 @@ class PostObjectLoader extends AbstractDataLoader {
 			 */
 			$post_object = get_post( (int) $key );
 
-			if ( empty( $post_object ) ) {
-			    return [];
-				//throw new UserError( sprintf( __( 'No item was found with ID %s', 'wp-graphql' ), $key ) );
-			}
-
 			/**
 			 * Return the instance through the Model to ensure we only
 			 * return fields the consumer has access to.

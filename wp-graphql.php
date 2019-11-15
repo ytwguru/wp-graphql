@@ -5,7 +5,7 @@
  * Description: GraphQL API for WordPress
  * Author: WPGraphQL
  * Author URI: http://www.wpgraphql.com
- * Version: 0.3.6
+ * Version: 0.4.0
  * Text Domain: wp-graphql
  * Domain Path: /languages/
  * Requires at least: 4.7.0
@@ -17,7 +17,7 @@
  * @package  WPGraphQL
  * @category Core
  * @author   WPGraphQL
- * @version  0.3.6
+ * @version  0.4.0
  */
 
 // Exit if accessed directly.
@@ -167,7 +167,7 @@ if ( ! class_exists( 'WPGraphQL' ) ) :
 
 			// Plugin version.
 			if ( ! defined( 'WPGRAPHQL_VERSION' ) ) {
-				define( 'WPGRAPHQL_VERSION', '0.3.6' );
+				define( 'WPGRAPHQL_VERSION', '0.4.0' );
 			}
 
 			// Plugin Folder Path.
@@ -223,6 +223,7 @@ if ( ! class_exists( 'WPGraphQL' ) ) :
 
 			// Required non-autoloaded classes.
 			require_once WPGRAPHQL_PLUGIN_DIR . 'access-functions.php';
+
 		}
 
 		/**
@@ -267,6 +268,7 @@ if ( ! class_exists( 'WPGraphQL' ) ) :
 			add_action( 'init_graphql_request', 'register_initial_settings', 10 );
 			add_action( 'init', [ $this, 'setup_types' ], 10 );
 			add_action( 'init', [ $this, 'get_allowed_types' ], 999 );
+
 		}
 
 		/**
@@ -390,16 +392,18 @@ if ( ! class_exists( 'WPGraphQL' ) ) :
 		 * are set to show_in_graphql, but allows for external code (plugins/theme) to filter the
 		 * list of allowed_post_types to add/remove additional post_types
 		 *
+		 * @param array $args Arguments to filter allowed post types
+		 *
 		 * @return array
 		 * @since  0.0.4
 		 * @access public
 		 */
-		public static function get_allowed_post_types() {
+		public static function get_allowed_post_types( $args = [] ) {
 
 			/**
 			 * Get all post_types
 			 */
-			$post_types = get_post_types( [ 'show_in_graphql' => true ] );
+			$post_types = get_post_types( array_merge( [ 'show_in_graphql' => true ], $args ) );
 
 			/**
 			 * Validate that the post_types have a graphql_single_name and graphql_plural_name
@@ -431,12 +435,8 @@ if ( ! class_exists( 'WPGraphQL' ) ) :
 			 *
 			 * @return array
 			 */
-			self::$allowed_post_types = apply_filters( 'graphql_post_entities_allowed_post_types', $post_types );
+			return apply_filters( 'graphql_post_entities_allowed_post_types', $post_types );
 
-			/**
-			 * Returns the array of allowed_post_types
-			 */
-			return self::$allowed_post_types;
 		}
 
 		/**
@@ -479,22 +479,17 @@ if ( ! class_exists( 'WPGraphQL' ) ) :
 			);
 
 			/**
-			 * Define the $allowed_taxonomies to be exposed by GraphQL Queries Pass through a filter
-			 * to allow the taxonomies to be modified (for example if a certain taxonomy should not
-			 * be exposed to the GraphQL API)
-			 *
-			 * @since 0.0.2
-			 * @return array
-			 *
-			 * @param array $taxonomies Array of taxonomy objects
-			 */
-			self::$allowed_taxonomies = apply_filters( 'graphql_term_entities_allowed_taxonomies', $taxonomies );
-
-			/**
 			 * Returns the array of $allowed_taxonomies
 			 */
-			return self::$allowed_taxonomies;
+			return apply_filters( 'graphql_term_entities_allowed_taxonomies', $taxonomies );
 
+		}
+
+		/**
+		 * Allow Schema to be cleared
+		 */
+		public static function __clear_schema() {
+			self::$schema = null;
 		}
 
 		/**
@@ -503,6 +498,8 @@ if ( ! class_exists( 'WPGraphQL' ) ) :
 		 *
 		 * @access protected
 		 * @return \WPGraphQL\WPSchema
+		 *
+		 * @throws Exception
 		 */
 		public static function get_schema() {
 
@@ -511,25 +508,11 @@ if ( ! class_exists( 'WPGraphQL' ) ) :
 			 */
 			do_action( 'graphql_get_schema', self::$schema );
 
-			/**
-			 * Initialize the TypeRegistry
-			 */
-			\WPGraphQL\TypeRegistry::init();
-			\WPGraphQL\SchemaRegistry::init();
-
 			if ( null === self::$schema ) {
 
-				/**
-				 * Filter the Active Schema, allowing for custom Schemas to be active instead
-				 * of the core schema
-				 */
-				$active_schema     = apply_filters( 'graphql_active_schema', 'core' );
-				$executable_schema = \WPGraphQL\SchemaRegistry::get_schema( $active_schema );
-
-				/**
-				 * Generate the Schema
-				 */
-				$schema = new \WPGraphQL\WPSchema( $executable_schema );
+				$type_registry = new \WPGraphQL\Registry\TypeRegistry();
+				$schema_registry = new \WPGraphQL\Registry\SchemaRegistry( $type_registry );
+				$schema        = $schema_registry->get_schema();
 
 				/**
 				 * Generate & Filter the schema.
