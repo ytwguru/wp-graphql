@@ -260,9 +260,9 @@ class Request {
 		/**
 		 * If there are authentication errors, prevent execution and throw an exception.
 		 */
-		if ( false !== $this->has_authentication_errors() ) {
+		/*if ( false !== $this->has_authentication_errors() ) {
 			throw new \Exception( __( 'Authentication Error', 'wp-graphql' ) );
-		}
+		}*/
 
 		/**
 		 * If the params and the $response are both arrays
