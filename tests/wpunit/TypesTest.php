@@ -145,4 +145,140 @@ class TypesTest extends \Codeception\TestCase\WPTestCase
 
 	}
 
+	/**
+	 * Ensure get_types returns types expected to be in the Schema
+	 * @throws Exception
+	 */
+	public function testTypeRegistryGetTypes() {
+
+		/**
+		 * Register a custom type to make sure new types registered
+		 * show in the get_types() method
+		 */
+		register_graphql_type( 'MyCustomType', [
+			'fields' => [
+				'test' => [
+					'type' => 'String'
+				]
+			]
+		] );
+
+		add_action( 'graphql_register_types', function( \WPGraphQL\Registry\TypeRegistry $type_registry ) {
+			$types = $type_registry->get_types();
+			codecept_debug( array_keys( $types ) );
+			$this->assertArrayHasKey( 'mycustomtype', $types );
+			$this->assertArrayHasKey( 'string', $types );
+			$this->assertArrayHasKey( 'post', $types );
+		} );
+
+		/**
+		 * Execute a GraphQL Request to instantiate the Schema
+		 */
+		$actual = graphql( ['query' => '{posts{nodes{id}}}'] );
+
+	}
+
+	/**
+	 * Test filtering listOf and nonNull fields onto a Type
+	 * @throws Exception
+	 */
+	public function testListOf() {
+
+		/**
+		 * Filter fields onto the User object
+		 */
+		add_filter( 'graphql_user_fields', function( $fields, $object, \WPGraphQL\Registry\TypeRegistry $type_registry ) {
+
+			$fields['testNonNullString'] = [
+				'type' => $type_registry->non_null( $type_registry->get_type( 'String' ) ),
+				'resolve' => function() {
+					return 'string';
+				}
+			];
+
+			$fields['testNonNullStringTwo'] = [
+				'type' => $type_registry->non_null( 'String' ),
+				'resolve' => function() {
+					return 'string';
+				}
+			];
+
+			$fields['testListOfString'] = [
+				'type' => $type_registry->list_of( $type_registry->get_type( 'String' ) ),
+				'resolve' => function() {
+					return [ 'string' ];
+				}
+			];
+
+			$fields['testListOfStringTwo'] = [
+				'type' => $type_registry->list_of( 'String' ),
+				'resolve' => function() {
+					return [ 'string' ];
+				}
+			];
+
+			$fields['testListOfNonNullString'] = [
+				'type' => $type_registry->list_of( $type_registry->non_null( 'String' ) ),
+				'resolve' => function() {
+					return [ 'string' ];
+				}
+			];
+
+			$fields['testNonNullListOfString'] = [
+				'type' => $type_registry->non_null( $type_registry->list_of( 'String' ) ),
+				'resolve' => function() {
+					return [ 'string' ];
+				}
+			];
+
+			return $fields;
+
+		}, 10, 3 );
+
+		$user_id = $this->factory()->user->create([
+			'user_login' => 'test' . uniqid(),
+			'user_email' => 'test' . uniqid() . '@example.com',
+			'role' => 'administrator',
+		]);
+
+		/**
+		 * Allow for the user to be queried
+		 */
+		wp_set_current_user( $user_id );
+		$user_id = \GraphQLRelay\Relay::toGlobalId( 'user', $user_id );
+
+		$query = '
+		query GET_USER( $id: ID! ) {
+		  user(id:$id) {
+		      id
+		      testNonNullString
+		      testListOfStringTwo
+		      testListOfString
+		      testNonNullStringTwo
+		      testListOfNonNullString
+		      testNonNullListOfString
+		  }
+		}
+		';
+
+		$actual = graphql([
+			'query' => $query,
+			'variables' => [
+				'id' => $user_id
+			]
+		]);
+
+		codecept_debug( $actual );
+
+
+		$this->assertArrayNotHasKey( 'errors', $actual );
+		$this->assertEquals( 'string', $actual['data']['user']['testNonNullString'] );
+		$this->assertEquals( 'string', $actual['data']['user']['testNonNullStringTwo'] );
+		$this->assertEquals( [ 'string' ], $actual['data']['user']['testListOfStringTwo'] );
+		$this->assertEquals( [ 'string' ], $actual['data']['user']['testListOfNonNullString'] );
+		$this->assertEquals( [ 'string' ], $actual['data']['user']['testNonNullListOfString'] );
+		$this->assertEquals( [ 'string' ], $actual['data']['user']['testListOfString'] );
+
+	}
+
 }
