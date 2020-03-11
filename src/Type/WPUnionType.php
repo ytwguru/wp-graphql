@@ -16,12 +16,15 @@ use WPGraphQL\Registry\TypeRegistry;
  */
 class WPUnionType extends UnionType {
 
-	protected $type_registry;
+	/**
+	 * @var TypeRegistry
+	 */
+	public $type_registry;
 
 	/**
 	 * WPUnionType constructor.
 	 *
-	 * @param array $config The Config to setup a Union Type
+	 * @param array        $config The Config to setup a Union Type
 	 * @param TypeRegistry $type_registry
 	 *
 	 * @since 0.0.30
@@ -60,8 +63,6 @@ class WPUnionType extends UnionType {
 			 */
 			return apply_filters( 'graphql_union_resolve_type', $type, $object, $this );
 		};
-
-
 
 		/**
 		 * Filter the possible_types to allow systems to add to the possible resolveTypes.

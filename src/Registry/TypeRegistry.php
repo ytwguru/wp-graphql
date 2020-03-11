@@ -3,13 +3,18 @@
 namespace WPGraphQL\Registry;
 
 use GraphQL\Error\InvariantViolation;
+use GraphQL\Type\Definition\ListOfType;
+use GraphQL\Type\Definition\NonNull;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
 use WPGraphQL\Connection\Comments;
+use WPGraphQL\Connection\ContentTypes;
 use WPGraphQL\Connection\MenuItems;
 use WPGraphQL\Connection\Menus;
 use WPGraphQL\Connection\Plugins;
 use WPGraphQL\Connection\PostObjects;
+use WPGraphQL\Connection\Revisions;
+use WPGraphQL\Connection\Taxonomies;
 use WPGraphQL\Connection\TermObjects;
 use WPGraphQL\Connection\Themes;
 use WPGraphQL\Connection\UserRoles;
@@ -35,9 +40,30 @@ use WPGraphQL\Mutation\UserCreate;
 use WPGraphQL\Mutation\UserDelete;
 use WPGraphQL\Mutation\UserRegister;
 use WPGraphQL\Mutation\UserUpdate;
+use WPGraphQL\Type\Enum\ContentNodeIdTypeEnum;
+use WPGraphQL\Type\Enum\ContentTypeIdTypeEnum;
+use WPGraphQL\Type\Enum\TaxonomyIdTypeEnum;
+use WPGraphQL\Type\Enum\TermNodeIdTypeEnum;
+use WPGraphQL\Type\Enum\UserNodeIdTypeEnum;
 use WPGraphQL\Type\Enum\UsersConnectionOrderbyEnum;
 use WPGraphQL\Type\Input\UsersConnectionOrderbyInput;
+use WPGraphQL\Type\InterfaceType\ContentNode;
+use WPGraphQL\Type\InterfaceType\ContentTemplate;
+use WPGraphQL\Type\InterfaceType\HierarchicalContentNode;
+use WPGraphQL\Type\InterfaceType\NodeWithAuthor;
+use WPGraphQL\Type\InterfaceType\NodeWithComments;
+use WPGraphQL\Type\InterfaceType\NodeWithContentEditor;
+use WPGraphQL\Type\InterfaceType\NodeWithExcerpt;
+use WPGraphQL\Type\InterfaceType\NodeWithFeaturedImage;
+use WPGraphQL\Type\InterfaceType\NodeWithPageAttributes;
+use WPGraphQL\Type\InterfaceType\NodeWithRevisions;
+use WPGraphQL\Type\InterfaceType\NodeWithTitle;
 use WPGraphQL\Type\InterfaceType\Node;
+use WPGraphQL\Type\InterfaceType\NodeWithTrackbacks;
+use WPGraphQL\Type\InterfaceType\TermNode;
+use WPGraphQL\Type\InterfaceType\UniformResourceIdentifiable;
+use WPGraphQL\Type\Union\ContentRevisionUnion;
+use WPGraphQL\Type\Union\ContentTemplateUnion;
 use WPGraphQL\Type\Union\PostObjectUnion;
 use WPGraphQL\Type\Union\MenuItemObjectUnion;
 use WPGraphQL\Type\Union\CommentAuthorUnion;
@@ -52,7 +78,7 @@ use WPGraphQL\Type\Enum\PostObjectFieldFormatEnum;
 use WPGraphQL\Type\Enum\PostObjectsConnectionDateColumnEnum;
 use WPGraphQL\Type\Enum\PostObjectsConnectionOrderbyEnum;
 use WPGraphQL\Type\Enum\PostStatusEnum;
-use WPGraphQL\Type\Enum\PostTypeEnum;
+use WPGraphQL\Type\Enum\ContentTypeEnum;
 use WPGraphQL\Type\Enum\RelationEnum;
 use WPGraphQL\Type\Enum\TaxonomyEnum;
 use WPGraphQL\Type\Enum\TermObjectsConnectionOrderbyEnum;
@@ -75,7 +101,7 @@ use WPGraphQL\Type\Object\MenuItem;
 use WPGraphQL\Type\Object\PageInfo;
 use WPGraphQL\Type\Object\Plugin;
 use WPGraphQL\Type\Object\PostObject;
-use WPGraphQL\Type\Object\PostType;
+use WPGraphQL\Type\Object\ContentType;
 use WPGraphQL\Type\Object\PostTypeLabelDetails;
 use WPGraphQL\Type\Object\RootMutation;
 use WPGraphQL\Type\Object\RootQuery;
@@ -138,185 +164,6 @@ class TypeRegistry {
 	 */
 	public function init() {
 
-		/**
-		 * When the Type Registry is initialized execute these files
-		 */
-		add_action(
-			'init_graphql_type_registry',
-			function( TypeRegistry $type_registry ) {
-
-				/**
-				 * Register Interfaces
-				 */
-				Node::register_type();
-
-				/**
-				 * Register Types
-				 */
-				RootQuery::register_type();
-				RootQuery::register_post_object_fields();
-				RootQuery::register_term_object_fields();
-				RootMutation::register_type();
-				Avatar::register_type();
-				Comment::register_type();
-				CommentAuthor::register_type();
-				EditLock::register_type();
-				MediaDetails::register_type();
-				MediaItemMeta::register_type();
-				MediaSize::register_type();
-				Menu::register_type();
-				MenuItem::register_type();
-				PageInfo::register_type();
-				Plugin::register_type();
-				PostType::register_type();
-				PostTypeLabelDetails::register_type();
-				Settings::register_type();
-				Taxonomy::register_type();
-				Theme::register_type();
-				User::register_type();
-				UserRole::register_type();
-
-				AvatarRatingEnum::register_type();
-				CommentsConnectionOrderbyEnum::register_type();
-				MediaItemSizeEnum::register_type();
-				MediaItemStatusEnum::register_type();
-				MenuLocationEnum::register_type();
-				MimeTypeEnum::register_type();
-				OrderEnum::register_type();
-				PostObjectFieldFormatEnum::register_type();
-				PostObjectsConnectionDateColumnEnum::register_type();
-				PostObjectsConnectionOrderbyEnum::register_type();
-				PostStatusEnum::register_type();
-				PostTypeEnum::register_type();
-				RelationEnum::register_type();
-				TaxonomyEnum::register_type();
-				TermObjectsConnectionOrderbyEnum::register_type();
-				TimezoneEnum::register_type();
-				UserRoleEnum::register_type();
-				UsersConnectionOrderbyEnum::register_type();
-				UsersConnectionSearchColumnEnum::register_type();
-
-				DateInput::register_type();
-				DateQueryInput::register_type();
-				MenuItemsConnectionWhereArgs::register_type();
-				PostObjectsConnectionOrderbyInput::register_type();
-				UsersConnectionOrderbyInput::register_type();
-
-				CommentAuthorUnion::register_type( $this );
-				MenuItemObjectUnion::register_type( $this );
-				PostObjectUnion::register_type( $this );
-				TermObjectUnion::register_type( $this );
-
-				/**
-				 * Register core connections
-				 */
-				Comments::register_connections();
-				Menus::register_connections();
-				MenuItems::register_connections();
-				Plugins::register_connections();
-				PostObjects::register_connections();
-				TermObjects::register_connections();
-				Themes::register_connections();
-				Users::register_connections();
-				UserRoles::register_connections();
-
-				/**
-				 * Register core mutations
-				 */
-				CommentCreate::register_mutation();
-				CommentDelete::register_mutation();
-				CommentRestore::register_mutation();
-				CommentUpdate::register_mutation();
-				MediaItemCreate::register_mutation();
-				MediaItemDelete::register_mutation();
-				MediaItemUpdate::register_mutation();
-				ResetUserPassword::register_mutation();
-				SendPasswordResetEmail::register_mutation();
-				UserCreate::register_mutation();
-				UserDelete::register_mutation();
-				UserUpdate::register_mutation();
-				UserRegister::register_mutation();
-				UpdateSettings::register_mutation();
-
-				/**
-				 * Register PostObject types based on post_types configured to show_in_graphql
-				 */
-				$allowed_post_types = \WPGraphQL::get_allowed_post_types();
-				if ( ! empty( $allowed_post_types ) && is_array( $allowed_post_types ) ) {
-					foreach ( $allowed_post_types as $post_type ) {
-						$post_type_object = get_post_type_object( $post_type );
-						PostObject::register_post_object_types( $post_type_object );
-
-						/**
-						 * Mutations for attachments are handled differently
-						 * because they require different inputs
-						 */
-						if ( 'attachment' !== $post_type_object->name ) {
-
-							/**
-							 * Revisions are created behind the scenes as a side effect of post updates,
-							 * they aren't created manually.
-							 */
-							if ( 'revision' !== $post_type_object->name ) {
-								PostObjectCreate::register_mutation( $post_type_object );
-								PostObjectUpdate::register_mutation( $post_type_object );
-							}
-
-							PostObjectDelete::register_mutation( $post_type_object );
-
-						}
-					}
-				}
-
-				/**
-				 * Register TermObject types based on taxonomies configured to show_in_graphql
-				 */
-				$allowed_taxonomies = \WPGraphQL::get_allowed_taxonomies();
-				if ( ! empty( $allowed_taxonomies ) && is_array( $allowed_taxonomies ) ) {
-					foreach ( $allowed_taxonomies as $taxonomy ) {
-						$taxonomy_object = get_taxonomy( $taxonomy );
-						TermObject::register_taxonomy_object_type( $taxonomy_object );
-						TermObjectCreate::register_mutation( $taxonomy_object );
-						TermObjectUpdate::register_mutation( $taxonomy_object );
-						TermObjectDelete::register_mutation( $taxonomy_object );
-					}
-				}
-
-				/**
-				 * Create the root query fields for any setting type in
-				 * the $allowed_setting_types array.
-				 */
-				$allowed_setting_types = DataSource::get_allowed_settings_by_group();
-
-				if ( ! empty( $allowed_setting_types ) && is_array( $allowed_setting_types ) ) {
-					foreach ( $allowed_setting_types as $group => $setting_type ) {
-
-						$group_name = lcfirst( str_replace( '_', '', ucwords( $group, '_' ) ) );
-						SettingGroup::register_settings_group( $group_name );
-
-						register_graphql_field(
-							'RootQuery',
-							$group_name . 'Settings',
-							[
-								'type'    => ucfirst( $group_name ) . 'Settings',
-								'resolve' => function() use ( $setting_type ) {
-									return $setting_type;
-								},
-							]
-						);
-					}
-				}
-
-				/**
-				 * Fire an action as the type registry is initialized. This executes
-				 * before the `graphql_register_types` action to allow for earlier hooking
-				 *
-				 * @param TypeRegistry $this Instance of the TypeRegistry
-				 */
-				do_action( 'graphql_register_types', $this );
-
-			}, 1, 1 );
-
 		$this->register_type( 'Bool', Type::boolean() );
 		$this->register_type( 'Boolean', Type::boolean() );
 		$this->register_type( 'Float', Type::float() );
@@ -327,11 +174,238 @@ class TypeRegistry {
 		$this->register_type( 'String', Type::string() );
 
 		/**
+		 * When the Type Registry is initialized execute these files
+		 */
+		add_action( 'init_graphql_type_registry', [ $this, 'init_type_registry' ], 1, 1 );
+
+		/**
 		 * Fire an action as the Type registry is being initiated
 		 *
 		 * @param TypeRegistry $this Instance of the TypeRegistry
 		 */
 		do_action( 'init_graphql_type_registry', $this );
+
+	}
+
+	/**
+	 * Initialize the Type Registry
+	 *
+	 * @param TypeRegistry $type_registry
+	 */
+	public function init_type_registry( TypeRegistry $type_registry ) {
+
+		/**
+		 * Register Interfaces
+		 */
+		Node::register_type();
+		ContentNode::register_type( $type_registry );
+		ContentTemplate::register_type( $type_registry );
+		HierarchicalContentNode::register_type( $type_registry );
+		NodeWithAuthor::register_type( $type_registry );
+		NodeWithComments::register_type( $type_registry );
+		NodeWithContentEditor::register_type( $type_registry );
+		NodeWithExcerpt::register_type( $type_registry );
+		NodeWithFeaturedImage::register_type( $type_registry );
+		NodeWithRevisions::register_type( $type_registry );
+		NodeWithTitle::register_type( $type_registry );
+		NodeWithTrackbacks::register_type( $type_registry );
+		NodeWithPageAttributes::register_type( $type_registry );
+		TermNode::register_type( $type_registry );
+		UniformResourceIdentifiable::register_type( $type_registry );
+
+		/**
+		 * Register Types
+		 */
+		RootQuery::register_type();
+		RootQuery::register_post_object_fields();
+		RootQuery::register_term_object_fields();
+		RootMutation::register_type();
+		Avatar::register_type();
+		Comment::register_type();
+		CommentAuthor::register_type();
+		EditLock::register_type();
+		MediaDetails::register_type();
+		MediaItemMeta::register_type();
+		MediaSize::register_type();
+		Menu::register_type();
+		MenuItem::register_type();
+		PageInfo::register_type();
+		Plugin::register_type();
+		ContentType::register_type();
+		PostTypeLabelDetails::register_type();
+		Settings::register_type();
+		Taxonomy::register_type();
+		Theme::register_type();
+		User::register_type();
+		UserRole::register_type();
+
+		AvatarRatingEnum::register_type();
+		CommentsConnectionOrderbyEnum::register_type();
+		ContentNodeIdTypeEnum::register_type();
+		ContentTypeEnum::register_type();
+		ContentTypeIdTypeEnum::register_type();
+		MediaItemSizeEnum::register_type();
+		MediaItemStatusEnum::register_type();
+		MenuLocationEnum::register_type();
+		MimeTypeEnum::register_type();
+		OrderEnum::register_type();
+		PostObjectFieldFormatEnum::register_type();
+		PostObjectsConnectionDateColumnEnum::register_type();
+		PostObjectsConnectionOrderbyEnum::register_type();
+		PostStatusEnum::register_type();
+		RelationEnum::register_type();
+		TaxonomyEnum::register_type();
+		TaxonomyIdTypeEnum::register_type();
+		TermNodeIdTypeEnum::register_type();
+		TermObjectsConnectionOrderbyEnum::register_type();
+		TimezoneEnum::register_type();
+		UserNodeIdTypeEnum::register_type();
+		UserRoleEnum::register_type();
+		UsersConnectionOrderbyEnum::register_type();
+		UsersConnectionSearchColumnEnum::register_type();
+
+		DateInput::register_type();
+		DateQueryInput::register_type();
+		MenuItemsConnectionWhereArgs::register_type();
+		PostObjectsConnectionOrderbyInput::register_type();
+		UsersConnectionOrderbyInput::register_type();
+
+		CommentAuthorUnion::register_type( $this );
+		ContentRevisionUnion::register_type( $this );
+		ContentTemplateUnion::register_type( $this );
+		MenuItemObjectUnion::register_type( $this );
+		PostObjectUnion::register_type( $this );
+		TermObjectUnion::register_type( $this );
+
+		/**
+		 * Register core connections
+		 */
+		Comments::register_connections();
+		Menus::register_connections();
+		MenuItems::register_connections();
+		Plugins::register_connections();
+		PostObjects::register_connections();
+		ContentTypes::register_connections();
+		Revisions::register_connections( $this );
+		Taxonomies::register_connections();
+		TermObjects::register_connections();
+		Themes::register_connections();
+		Users::register_connections();
+		UserRoles::register_connections();
+
+		/**
+		 * Register core mutations
+		 */
+		CommentCreate::register_mutation();
+		CommentDelete::register_mutation();
+		CommentRestore::register_mutation();
+		CommentUpdate::register_mutation();
+		MediaItemCreate::register_mutation();
+		MediaItemDelete::register_mutation();
+		MediaItemUpdate::register_mutation();
+		ResetUserPassword::register_mutation();
+		SendPasswordResetEmail::register_mutation();
+		UserCreate::register_mutation();
+		UserDelete::register_mutation();
+		UserUpdate::register_mutation();
+		UserRegister::register_mutation();
+		UpdateSettings::register_mutation();
+
+		/**
+		 * Register PostObject types based on post_types configured to show_in_graphql
+		 */
+		$allowed_post_types = \WPGraphQL::get_allowed_post_types();
+		if ( ! empty( $allowed_post_types ) && is_array( $allowed_post_types ) ) {
+			foreach ( $allowed_post_types as $post_type ) {
+				$post_type_object = get_post_type_object( $post_type );
+				PostObject::register_post_object_types( $post_type_object, $type_registry );
+
+				/**
+				 * Mutations for attachments are handled differently
+				 * because they require different inputs
+				 */
+				if ( 'attachment' !== $post_type_object->name ) {
+
+					/**
+					 * Revisions are created behind the scenes as a side effect of post updates,
+					 * they aren't created manually.
+					 */
+					if ( 'revision' !== $post_type_object->name ) {
+						PostObjectCreate::register_mutation( $post_type_object );
+						PostObjectUpdate::register_mutation( $post_type_object );
+					}
+
+					PostObjectDelete::register_mutation( $post_type_object );
+
+				}
+			}
+		}
+
+		/**
+		 * Register TermObject types based on taxonomies configured to show_in_graphql
+		 */
+		$allowed_taxonomies = \WPGraphQL::get_allowed_taxonomies();
+		if ( ! empty( $allowed_taxonomies ) && is_array( $allowed_taxonomies ) ) {
+			foreach ( $allowed_taxonomies as $taxonomy ) {
+				$taxonomy_object = get_taxonomy( $taxonomy );
+				TermObject::register_taxonomy_object_type( $taxonomy_object );
+				TermObjectCreate::register_mutation( $taxonomy_object );
+				TermObjectUpdate::register_mutation( $taxonomy_object );
+				TermObjectDelete::register_mutation( $taxonomy_object );
+			}
+		}
+
+		/**
+		 * Create the root query fields for any setting type in
+		 * the $allowed_setting_types array.
+		 */
+		$allowed_setting_types = DataSource::get_allowed_settings_by_group();
+
+		if ( ! empty( $allowed_setting_types ) && is_array( $allowed_setting_types ) ) {
+			foreach ( $allowed_setting_types as $group => $setting_type ) {
+
+				$group_name = lcfirst( preg_replace( '[^a-zA-Z0-9 -]', '_', $group ) );
+				$group_name = lcfirst( str_replace( '_', ' ', ucwords( $group_name, '_' ) ) );
+				$group_name = lcfirst( str_replace( '-', ' ', ucwords( $group_name, '_' ) ) );
+				$group_name = lcfirst( str_replace( ' ', '', ucwords( $group_name, ' ' ) ) );
+				SettingGroup::register_settings_group( $group_name, $group );
+
+				register_graphql_field(
+					'RootQuery',
+					$group_name . 'Settings',
+					[
+						'type'    => ucfirst( $group_name ) . 'Settings',
+						'resolve' => function() use ( $setting_type ) {
+							return $setting_type;
+						},
+					]
+				);
+			}
+		}
+
+		/**
+		 * Fire an action as the type registry is initialized. This executes
+		 * before the `graphql_register_types` action to allow for earlier hooking
+		 *
+		 * @param \WPGraphQL\Registry\TypeRegistry $this Instance of the TypeRegistry
+		 */
+		do_action( 'graphql_register_initial_types', $type_registry );
+
+		/**
+		 * Fire an action as the type registry is initialized. This executes
+		 * before the `graphql_register_types` action to allow for earlier hooking
+		 *
+		 * @param TypeRegistry $this Instance of the TypeRegistry
+		 */
+		do_action( 'graphql_register_types', $this );
+
+		/**
+		 * Fire an action as the type registry is initialized. This executes
+		 * during the `graphql_register_types` action to allow for earlier hooking
+		 *
+		 * @param \WPGraphQL\Registry\TypeRegistry $this Instance of the TypeRegistry
+		 */
+		do_action( 'graphql_register_types_late', $type_registry );
 
 	}
 
@@ -437,7 +511,7 @@ class TypeRegistry {
 				case 'input':
 					if ( ! empty( $config['fields'] ) && is_array( $config['fields'] ) ) {
 						$config['fields'] = function() use ( $config ) {
-							$fields = WPInputObjectType::prepare_fields( $config['fields'], $config['name'] );
+							$fields = WPInputObjectType::prepare_fields( $config['fields'], $config['name'], $config, $this );
 							$fields = $this->prepare_fields( $fields, $config['name'] );
 
 							return $fields;
@@ -725,6 +799,7 @@ class TypeRegistry {
 		};
 		$connection_name    = ! empty( $config['connectionTypeName'] ) ? $config['connectionTypeName'] : $this->get_connection_name( $from_type, $to_type );
 		$where_args         = [];
+		$one_to_one         = isset( $config['oneToOne'] ) && true === $config['oneToOne'] ? true : false;
 
 		/**
 		 * If there are any $connectionArgs,
@@ -745,7 +820,6 @@ class TypeRegistry {
 
 			$where_args = [
 				'where' => [
-					// @TODO: Same as above ^ description seems a little vague
 					'description' => __( 'Arguments for filtering the connection', 'wp-graphql' ),
 					'type'        => $connection_name . 'WhereArgs',
 				],
@@ -781,77 +855,116 @@ class TypeRegistry {
 			]
 		);
 
-		$this->register_object_type(
-			$connection_name,
-			[
-				// Translators: the placeholders are the name of the Types the connection is between.
-				'description' => __( sprintf( 'Connection between the %1$s type and the %2s type', $from_type, $to_type ), 'wp-graphql' ),
-				'fields'      => array_merge(
-					[
-						'pageInfo' => [
-							// @todo: change to PageInfo when/if the Relay lib is deprecated
-							'type'        => 'WPPageInfo',
-							'description' => __( 'Information about pagination in a connection.', 'wp-graphql' ),
-						],
-						'edges'    => [
-							'type'        => [
-								'list_of' => $connection_name . 'Edge',
-							],
-							'description' => __( sprintf( 'Edges for the %1$s connection', $connection_name ), 'wp-graphql' ),
-						],
-						'nodes'    => [
-							'type'        => [
-								'list_of' => $to_type,
-							],
-							'description' => __( 'The nodes of the connection, without the edges', 'wp-graphql' ),
-							'resolve'     => function( $source, $args, $context, $info ) use ( $resolve_node ) {
-								$nodes = [];
-								if ( ! empty( $source['nodes'] ) && is_array( $source['nodes'] ) ) {
-									if ( is_callable( $resolve_node ) ) {
-										foreach ( $source['nodes'] as $node ) {
-											$nodes[] = $resolve_node( $node, $args, $context, $info );
-										}
-									} else {
-										return $source['nodes'];
-									}
-								}
+		if ( true === $one_to_one ) {
 
-								return $nodes;
-							},
+			$this->register_object_type(
+				$connection_name,
+				[
+					'description' => __( sprintf( 'Connection between the %1$s type and the %2s type', $from_type, $to_type ), 'wp-graphql' ),
+					'fields'      => array_merge(
+						[
+							'node' => [
+								'type'        => $to_type,
+								'description' => __( 'The nodes of the connection, without the edges', 'wp-graphql' ),
+								'resolve'     => function( $source, $args, $context, $info ) use ( $resolve_node ) {
+									$nodes = [];
+									if ( ! empty( $source['nodes'] ) && is_array( $source['nodes'] ) ) {
+										if ( is_callable( $resolve_node ) ) {
+											foreach ( $source['nodes'] as $node ) {
+												$nodes[] = $resolve_node( $node, $args, $context, $info );
+											}
+										} else {
+											return $source['nodes'];
+										}
+									}
+
+									return $nodes[0];
+								},
+							],
 						],
-					],
-					$connection_fields
-				),
-			]
-		);
+						$edge_fields
+					),
+				]
+			);
+
+		} else {
+
+			$this->register_object_type(
+				$connection_name,
+				[
+					// Translators: the placeholders are the name of the Types the connection is between.
+					'description' => __( sprintf( 'Connection between the %1$s type and the %2s type', $from_type, $to_type ), 'wp-graphql' ),
+					'fields'      => array_merge(
+						[
+							'pageInfo' => [
+								// @todo: change to PageInfo when/if the Relay lib is deprecated
+								'type'        => 'WPPageInfo',
+								'description' => __( 'Information about pagination in a connection.', 'wp-graphql' ),
+							],
+							'edges'    => [
+								'type'        => [
+									'list_of' => $connection_name . 'Edge',
+								],
+								'description' => __( sprintf( 'Edges for the %1$s connection', $connection_name ), 'wp-graphql' ),
+							],
+							'nodes'    => [
+								'type'        => [
+									'list_of' => $to_type,
+								],
+								'description' => __( 'The nodes of the connection, without the edges', 'wp-graphql' ),
+								'resolve'     => function( $source, $args, $context, $info ) use ( $resolve_node ) {
+									$nodes = [];
+									if ( ! empty( $source['nodes'] ) && is_array( $source['nodes'] ) ) {
+										if ( is_callable( $resolve_node ) ) {
+											foreach ( $source['nodes'] as $node ) {
+												$nodes[] = $resolve_node( $node, $args, $context, $info );
+											}
+										} else {
+											return $source['nodes'];
+										}
+									}
+
+									return $nodes;
+								},
+							],
+						],
+						$connection_fields
+					),
+				]
+			);
+
+		}
+
+		if ( true === $one_to_one ) {
+			$pagination_args = [];
+		} else {
+			$pagination_args = [
+				'first'  => [
+					'type'        => 'Int',
+					'description' => __( 'The number of items to return after the referenced "after" cursor', 'wp-graphql' ),
+				],
+				'last'   => [
+					'type'         => 'Int',
+					'description ' => __( 'The number of items to return before the referenced "before" cursor', 'wp-graphql' ),
+				],
+				'after'  => [
+					'type'        => 'String',
+					'description' => __( 'Cursor used along with the "first" argument to reference where in the dataset to get data', 'wp-graphql' ),
+				],
+				'before' => [
+					'type'        => 'String',
+					'description' => __( 'Cursor used along with the "last" argument to reference where in the dataset to get data', 'wp-graphql' ),
+				],
+			];
+		}
 
 		$this->register_field(
 			$from_type,
 			$from_field_name,
 			[
 				'type'        => $connection_name,
-				'args'        => array_merge(
-					[
-						'first'  => [
-							'type'        => 'Int',
-							'description' => __( 'The number of items to return after the referenced "after" cursor', 'wp-graphql' ),
-						],
-						'last'   => [
-							'type'         => 'Int',
-							'description ' => __( 'The number of items to return before the referenced "before" cursor', 'wp-graphql' ),
-						],
-						'after'  => [
-							'type'        => 'String',
-							'description' => __( 'Cursor used along with the "first" argument to reference where in the dataset to get data', 'wp-graphql' ),
-						],
-						'before' => [
-							'type'        => 'String',
-							'description' => __( 'Cursor used along with the "last" argument to reference where in the dataset to get data', 'wp-graphql' ),
-						],
-					],
-					$where_args
-				),
-				'description' => sprintf( __( 'Connection between the %1$s type and the %2s type', 'wp-graphql' ), $from_type, $to_type ),
+				'args'        => array_merge( $pagination_args, $where_args ),
+				'description' => ! empty( $config['description'] ) ? $config['description'] : sprintf( __( 'Connection between the %1$s type and the %2s type', 'wp-graphql' ), $from_type, $to_type ),
 				'resolve'     => function( $root, $args, $context, $info ) use ( $resolve_connection, $connection_name ) {
 
 					/**
@@ -958,7 +1071,6 @@ class TypeRegistry {
 				],
 				'type'        => $mutation_name . 'Payload',
 				'resolve'     => function( $root, $args, $context, ResolveInfo $info ) use ( $mutateAndGetPayload, $mutation_name ) {
-					// @todo: Might want to check that this is callable before invoking, otherwise errors could happen
 					if ( ! is_callable( $mutateAndGetPayload ) ) {
 						// Translators: The placeholder is the name of the mutation
 						throw new \Exception( sprintf( __( 'The resolver for the mutation %s is not callable', 'wp-graphql' ), $mutation_name ) );
@@ -971,6 +1083,34 @@ class TypeRegistry {
 			]
 		);
 
+	}
+
+	/**
+	 * Given a Type, this returns an instance of a NonNull of that type
+	 *
+	 * @param mixed string|ObjectType|InterfaceType|UnionType|ScalarType|InputObjectType|EnumType|ListOfType $type
+	 * @return NonNull
+	 */
+	public function non_null( $type ) {
+		if ( is_string( $type ) ) {
+			$type_def = $this->get_type( $type );
+			return Type::nonNull( $type_def );
+		}
+		return Type::nonNull( $type );
+	}
+
+	/**
+	 * Given a Type, this returns an instance of a listOf of that type
+	 *
+	 * @param mixed string|ObjectType|InterfaceType|UnionType|ScalarType|InputObjectType|EnumType|ListOfType $type
+	 * @return ListOfType
+	 */
+	public function list_of( $type ) {
+		if ( is_string( $type ) ) {
+			$type_def = $this->get_type( $type );
+			return Type::listOf( $type_def );
+		}
+		return Type::listOf( $type );
 	}
 
 }

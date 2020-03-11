@@ -80,10 +80,10 @@ class Comments {
 			'toType'         => 'Comment',
 			'fromFieldName'  => 'comments',
 			'connectionArgs' => self::get_connection_args(),
-			'resolveNode'    => function ( $id, $args, $context, $info ) {
+			'resolveNode'    => function( $id, $args, $context, $info ) {
 				return DataSource::resolve_comment( $id, $context );
 			},
-			'resolve'        => function ( $root, $args, $context, $info ) {
+			'resolve'        => function( $root, $args, $context, $info ) {
 				return DataSource::resolve_comments_connection( $root, $args, $context, $info );
 			},
 		];
@@ -231,7 +231,7 @@ class Comments {
 			],
 			'contentType'        => [
 				'type'        => [
-					'list_of' => 'PostTypeEnum',
+					'list_of' => 'ContentTypeEnum',
 				],
 				'description' => __( 'Content object type or array of types to retrieve affiliated comments for. Pass \'any\' to match any value.', 'wp-graphql' ),
 			],

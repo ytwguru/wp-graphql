@@ -27,21 +27,37 @@ class PostObjectConnectionResolver extends AbstractConnectionResolver {
 	/**
 	 * PostObjectConnectionResolver constructor.
 	 *
-	 * @param mixed       $source    The object passed down from the previous level in the Resolve
-	 *                               tree
-	 * @param array       $args      The input arguments for the query
-	 * @param AppContext  $context   The context of the request
-	 * @param ResolveInfo $info      The resolve info passed down the Resolve tree
-	 * @param string      $post_type The post type to resolve for
+	 * @param mixed              $source           The object passed down from the previous level in the
+	 *                                             Resolve tree
+	 * @param array              $args             The input arguments for the query
+	 * @param AppContext         $context          The context of the request
+	 * @param ResolveInfo        $info             The resolve info passed down the Resolve tree
+	 * @param mixed string|array $post_type The post type to resolve for
 	 *
 	 * @throws \Exception
 	 */
 	public function __construct( $source, $args, $context, $info, $post_type ) {
 
 		/**
-		 * Set the post type for the resolver
+		 * The $post_type can either be a single value or an array of post_types to
+		 * pass to WP_Query.
+		 *
+		 * If the value is revision or attachment, we will leave the value
+		 * as a string, as we validate against this later.
+		 *
+		 * If the value is anything else, we cast as an array. For example
+		 *
+		 * $post_type = 'post' would become [ 'post ' ], as we check later
+		 * for `in_array()` if the $post_type is not "attachment" or "revision"
 		 */
-		$this->post_type = $post_type;
+		if ( 'revision' === $post_type || 'attachment' === $post_type ) {
+			$this->post_type = $post_type;
+		} else {
+			$post_type = is_array( $post_type ) ? $post_type : [ $post_type ];
+			unset( $post_type['attachment'] );
+			unset( $post_type['revision'] );
+			$this->post_type = $post_type;
+		}
 
 		/**
 		 * Call the parent construct to setup class data
@@ -88,10 +104,21 @@ class PostObjectConnectionResolver extends AbstractConnectionResolver {
 		 * If the user doesn't have permission to edit the parent post, then we shouldn't
 		 * even execute the connection
 		 */
-		if ( isset( $this->post_type ) && 'revision' === $this->post_type && $this->source instanceof Post ) {
-			$parent_post_type_obj = get_post_type_object( $this->source->post_type );
-			if ( ! current_user_can( $parent_post_type_obj->cap->edit_post, $this->source->ID ) ) {
-				$this->should_execute = false;
+		if ( isset( $this->post_type ) && 'revision' === $this->post_type ) {
+
+			if ( $this->source instanceof Post ) {
+				$parent_post_type_obj = get_post_type_object( $this->source->post_type );
+				if ( ! current_user_can( $parent_post_type_obj->cap->edit_post, $this->source->ID ) ) {
+					$this->should_execute = false;
+				}
+				/**
+				 * If the connection is from the RootQuery, check if the user
+				 * has the 'edit_posts' capability
+				 */
+			} else {
+				if ( ! current_user_can( 'edit_posts' ) ) {
+					$this->should_execute = false;
+				}
 			}
 		}
 
@@ -207,9 +234,10 @@ class PostObjectConnectionResolver extends AbstractConnectionResolver {
 				case $this->source instanceof Term:
 					$query_args['tax_query'] = [
 						[
-							'taxonomy' => $this->source->taxonomyName,
-							'terms'    => [ $this->source->term_id ],
-							'field'    => 'term_id',
+							'taxonomy'         => $this->source->taxonomyName,
+							'terms'            => [ $this->source->term_id ],
+							'field'            => 'term_id',
+							'include_children' => false,
 						],
 					];
 					break;
@@ -256,7 +284,7 @@ class PostObjectConnectionResolver extends AbstractConnectionResolver {
 					$query_args['orderby'] = esc_sql( $orderby_input['field'] );
 				} elseif ( ! empty( $orderby_input['field'] ) && ! empty( $orderby_input['order'] )) {
 					$query_args['orderby'] = [
-						esc_sql( $orderby_input['field'] ) => esc_sql( $orderby_input['order'] ),
+						esc_sql( $orderby_input['field'] ) => isset( $orderby_input['order'] ) ? esc_sql( $orderby_input['order'] ) : 'DESC',
 					];
 				}
 			}
@@ -449,7 +477,14 @@ class PostObjectConnectionResolver extends AbstractConnectionResolver {
 		/**
 		 * Get the Post Type object
 		 */
-		$post_type_obj = get_post_type_object( $this->post_type );
+		$post_type_objects = [];
+		if ( is_array( $this->post_type ) ) {
+			foreach ( $this->post_type as $post_type ) {
+				$post_type_objects[] = get_post_type_object( $post_type );
+			}
+		} else {
+			$post_type_objects[] = get_post_type_object( $this->post_type );
+		}
 
 		/**
 		 * Make sure the statuses are allowed to be queried by the current user. If so, allow it,
@@ -458,14 +493,16 @@ class PostObjectConnectionResolver extends AbstractConnectionResolver {
 		 */
 		$allowed_statuses = array_filter(
 			array_map(
-				function( $status ) use ( $post_type_obj ) {
-					if ( 'publish' === $status ) {
-						  return $status;
-					}
-					if ( current_user_can( $post_type_obj->cap->edit_posts ) || 'private' === $status && current_user_can( $post_type_obj->cap->read_private_posts ) ) {
-						return $status;
-					} else {
-						return null;
+				function( $status ) use ( $post_type_objects ) {
+					foreach ( $post_type_objects as $post_type_object ) {
+						if ( 'publish' === $status ) {
+							return $status;
+						}
+						if ( current_user_can( $post_type_object->cap->edit_posts ) || 'private' === $status && current_user_can( $post_type_object->cap->read_private_posts ) ) {
+							return $status;
+						} else {
+							return null;
+						}
 					}
 				},
 				$statuses
@@ -495,6 +532,21 @@ class PostObjectConnectionResolver extends AbstractConnectionResolver {
 		 * Return the $allowed_statuses to the query args
 		 */
 		return $allowed_statuses;
+	}
+
+	/**
+	 * Determine whether or not the the offset is valid, i.e the post corresponding to the offset
+	 * exists. Offset is equivalent to post_id. So this function is equivalent to checking if the
+	 * post with the given ID exists.
+	 *
+	 * @access public
+	 *
+	 * @param int $offset The ID of the node used in the cursor offset
+	 *
+	 * @return bool
+	 */
+	public function is_valid_offset( $offset ) {
+		return ! empty( get_post( absint( $offset ) ) );
 	}
 
 }
