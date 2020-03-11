@@ -2,6 +2,7 @@
 
 namespace WPGraphQL\Connection;
 
+use WPGraphQL\Data\Connection\TermObjectConnectionResolver;
 use WPGraphQL\Data\DataSource;
 
 /**
@@ -22,6 +23,32 @@ class TermObjects {
 
 		$allowed_taxonomies = \WPGraphQL::get_allowed_taxonomies();
 		$allowed_post_types = \WPGraphQL::get_allowed_post_types();
+
+		register_graphql_connection(
+			[
+				'fromType'       => 'RootQuery',
+				'toType'         => 'TermNode',
+				'queryClass'     => 'WP_Term_Query',
+				'resolveNode'    => function( $id, $args, $context, $info ) {
+					return DataSource::resolve_term_object( $id, $context );
+				},
+				'fromFieldName'  => 'terms',
+				'connectionArgs' => self::get_connection_args(
+					[
+						'taxonomies' => [
+							'type'        => [ 'list_of' => 'TaxonomyEnum' ],
+							'description' => __( 'The Taxonomy to filter terms by', 'wp-graphql' ),
+						],
+					]
+				),
+				'resolve'        => function ( $source, $args, $context, $info ) {
+					$taxonomies = isset( $args['where']['taxonomies'] ) && is_array( $args['where']['taxonomies'] ) ? $args['where']['taxonomies'] : \WPGraphQL::get_allowed_taxonomies();
+					$resolver   = new TermObjectConnectionResolver( $source, $args, $context, $info, array_values( $taxonomies ) );
+					$connection = $resolver->get_connection();
+					return $connection;
+				},
+			]
+		);
 
 		/**
 		 * Loop through the allowed_taxonomies to register appropriate connections
@@ -86,24 +113,15 @@ class TermObjects {
 	public static function get_connection_config( $tax_object, $args = [] ) {
 
 		$defaults = [
-			'fromType'         => 'RootQuery',
-			'queryClass'       => 'WP_Term_Query',
-			'toType'           => $tax_object->graphql_single_name,
-			'fromFieldName'    => $tax_object->graphql_plural_name,
-			'connectionArgs'   => self::get_connection_args(),
-			'connectionFields' => [
-				'taxonomyInfo' => [
-					'type'        => 'Taxonomy',
-					'description' => __( 'Information about the type of content being queried', 'wp-graphql' ),
-					'resolve'     => function ( $source, array $args, $context, $info ) use ( $tax_object ) {
-						return DataSource::resolve_taxonomy( $tax_object->name );
-					},
-				],
-			],
-			'resolveNode'      => function( $id, $args, $context, $info ) {
+			'fromType'       => 'RootQuery',
+			'queryClass'     => 'WP_Term_Query',
+			'toType'         => $tax_object->graphql_single_name,
+			'fromFieldName'  => $tax_object->graphql_plural_name,
+			'connectionArgs' => self::get_connection_args(),
+			'resolveNode'    => function( $id, $args, $context, $info ) {
 				return DataSource::resolve_term_object( $id, $context );
 			},
-			'resolve'          => function ( $root, $args, $context, $info ) use ( $tax_object ) {
+			'resolve'        => function ( $root, $args, $context, $info ) use ( $tax_object ) {
 				return DataSource::resolve_term_objects_connection( $root, $args, $context, $info, $tax_object->name );
 			},
 		];

@@ -239,10 +239,10 @@ class DataSource {
 	 * Wrapper for PostObjectsConnectionResolver
 	 *
 	 * @param             $source
-	 * @param array       $args      Arguments to pass to the resolve method
-	 * @param AppContext  $context   AppContext object to pass down
-	 * @param ResolveInfo $info      The ResolveInfo object
-	 * @param string      $post_type Post type of the post we are trying to resolve
+	 * @param array              $args    Arguments to pass to the resolve method
+	 * @param AppContext         $context AppContext object to pass down
+	 * @param ResolveInfo        $info    The ResolveInfo object
+	 * @param mixed string|array $post_type Post type of the post we are trying to resolve
 	 *
 	 * @return mixed
 	 * @since  0.0.5
@@ -459,13 +459,15 @@ class DataSource {
 	 */
 	public static function resolve_user_role( $name ) {
 
-		$role = get_role( $name );
+		$role = isset( wp_roles()->roles[ $name ] ) ? wp_roles()->roles[ $name ] : null;
 
 		if ( null === $role ) {
 			throw new UserError( sprintf( __( 'No user role was found with the name %s', 'wp-graphql' ), $name ) );
 		} else {
-			$role       = (array) $role;
-			$role['id'] = $name;
+			$role                = (array) $role;
+			$role['id']          = $name;
+			$role['displayName'] = $role['name'];
+			$role['name']        = $name;
 
 			return new UserRole( $role );
 		}
@@ -524,11 +526,6 @@ class DataSource {
 	 * @return array $settings_groups[ $group ]
 	 */
 	public static function get_setting_group_fields( $group ) {
-
-		/**
-		 * Convert camelCase $group to snake_case to match $settings_groups keys retrieved from WordPress
-		 */
-		$group = strtolower( preg_replace( '/(?<=[a-z])(?=[A-Z])/', '_', $group ) );
 
 		/**
 		 * Get all of the settings, sorted by group
@@ -682,7 +679,7 @@ class DataSource {
 					$type = 'Comment';
 					break;
 				case $node instanceof PostType:
-					$type = 'PostType';
+					$type = 'ContentType';
 					break;
 				case $node instanceof Taxonomy:
 					$type = 'Taxonomy';
@@ -786,7 +783,7 @@ class DataSource {
 				case 'plugin':
 					$node = self::resolve_plugin( $id_components['id'] );
 					break;
-				case 'postType':
+				case 'contentType':
 					$node = self::resolve_post_type( $id_components['id'] );
 					break;
 				case 'taxonomy':
@@ -896,4 +893,24 @@ class DataSource {
 
 		return ! empty( $_wp_registered_nav_menus ) && is_array( $_wp_registered_nav_menus ) ? array_keys( $_wp_registered_nav_menus ) : [];
 	}
+
+	/**
+	 * This resolves a resource, given a URI (the path / permalink to a resource)
+	 *
+	 * Based largely on the core parse_request function in wp-includes/class-wp.php
+	 *
+	 * @param string      $uri     The URI to fetch a resource from
+	 * @param AppContext  $context The AppContext passed through the GraphQL Resolve Tree
+	 * @param ResolveInfo $info    The ResolveInfo passed through the GraphQL Resolve tree
+	 *
+	 * @return mixed
+	 * @throws \Exception
+	 */
+	public static function resolve_resource_by_uri( $uri, $context, $info ) {
+
+		$node_resolver = new NodeResolver();
+		return $node_resolver->resolve_uri( $uri );
+
+	}
+
 }

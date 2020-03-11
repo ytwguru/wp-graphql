@@ -25,6 +25,7 @@ use GraphQLRelay\Relay;
  * @property string $nicename
  * @property string $locale
  * @property int    $userId
+ * @property string $uri
  *
  * @package WPGraphQL\Model
  */
@@ -62,6 +63,7 @@ class User extends Model {
 			'lastName',
 			'description',
 			'slug',
+			'uri',
 		];
 
 		parent::__construct( 'list_users', $allowed_restricted_fields, $user->ID );
@@ -76,19 +78,11 @@ class User extends Model {
 	 */
 	protected function is_private() {
 
-		if ( ! current_user_can( 'list_users' ) && false === $this->owner_matches_current_user() ) {
-
-			/**
-			 * @todo: We should handle this check in a Deferred resolver. Right now it queries once per user
-			 *      but we _could_ query once for _all_ users.
-			 *
-			 *      For now, we only query if the current user doesn't have list_users, instead of querying
-			 *      for ALL users. Slightly more efficient for authenticated users at least.
-			 */
+		/*if ( ! current_user_can( 'list_users' ) && false === $this->owner_matches_current_user() ) {
 			if ( ! count_user_posts( absint( $this->data->ID ), \WPGraphQL::get_allowed_post_types(), true ) ) {
 				return true;
 			}
-		}
+		}*/
 
 		return false;
 
@@ -172,9 +166,15 @@ class User extends Model {
 				},
 				'locale'            => function() {
 					$user_locale = get_user_locale( $this->data );
+
 					return ! empty( $user_locale ) ? $user_locale : null;
 				},
 				'userId'            => ! empty( $this->data->ID ) ? absint( $this->data->ID ) : null,
+				'uri'               => function() {
+					$user_profile_url = get_author_posts_url( $this->data->ID );
+
+					return ! empty( $user_profile_url ) ? ltrim( str_ireplace( home_url(), '', $user_profile_url ), '/' ) : '';
+				},
 			];
 
 		}
