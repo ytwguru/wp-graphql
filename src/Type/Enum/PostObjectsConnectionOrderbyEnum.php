@@ -45,6 +45,10 @@ class PostObjectsConnectionOrderbyEnum {
 						'value'       => 'menu_order',
 						'description' => __( 'Order by the menu order value', 'wp-graphql' ),
 					],
+                    'META' => [
+                        'value'       => 'meta_value_num',
+                        'description' => __( 'Order by the menu order value', 'wp-graphql' ),
+                    ]
 				],
 			]
 		);
